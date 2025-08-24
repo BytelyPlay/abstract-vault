@@ -44,7 +44,7 @@ public class DataSetter {
                 throw new IllegalArgumentException("Tried to add a getterSetter with an ID that already exists.");
             }
             gettersSettersWithIDs.put(new GetterSetter<>(getter, setter),
-                    String.valueOf(defaultCounter++));
+                    ID);
             return this;
         }
     }
