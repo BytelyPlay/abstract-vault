@@ -17,6 +17,8 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.20.0-rc1")
     implementation("org.slf4j:slf4j-api:2.0.17")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.20.0-rc1")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.20.0-rc1")
 }
 
 tasks.test {
