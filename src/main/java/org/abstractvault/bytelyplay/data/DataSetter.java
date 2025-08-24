@@ -70,9 +70,9 @@ public class DataSetter {
                 return;
             }
             switch (format) {
-                case DataFormat.TEXT_JSON -> loadWithMapper(new ObjectMapper());
-                case BINARY_CBOR -> loadWithMapper(new ObjectMapper(new CBORFactory()));
-                case BINARY_SMILE -> loadWithMapper(new ObjectMapper(new SmileFactory()));
+                case DataFormat.TEXT_JSON -> loadWithMapper(new ObjectMapper(), jsonFile);
+                case BINARY_CBOR -> loadWithMapper(new ObjectMapper(new CBORFactory()), jsonFile);
+                case BINARY_SMILE -> loadWithMapper(new ObjectMapper(new SmileFactory()), jsonFile);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -104,7 +104,7 @@ public class DataSetter {
         return null;
     }
     @SuppressWarnings("unchecked")
-    private void loadWithMapper(ObjectMapper mapper) {
+    private void loadWithMapper(ObjectMapper mapper, Path jsonFile) {
         try {
             JsonNode rootNode = mapper.readTree(new FileInputStream(jsonFile.toString()));
             for (int i = 0; i < gettersSetters.size(); i++) {
