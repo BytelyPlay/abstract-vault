@@ -20,31 +20,48 @@ import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class DataSetter {
-    private final ArrayList<GetterSetter<?>> gettersSetters;
+    private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs;
 
     public static class Builder {
-        private ArrayList<GetterSetter<?>> gettersSetters = new ArrayList<>();
+        private ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs = new ConcurrentHashMap<>();
+        private int defaultCounter = 0;
         public DataSetter build() {
             return new DataSetter(this);
         }
         public <T> Builder getterSetter(Getter<T> getter, Setter<T> setter) {
-            gettersSetters.add(new GetterSetter<T>(getter, setter));
+            int id = defaultCounter++;
+            while (gettersSettersWithIDs.containsValue(String.valueOf(id))) id++;
+            getterSetter(getter, setter, String.valueOf(id));
+            return this;
+        }
+        public <T> Builder getterSetter(Getter<T> getter, Setter<T> setter, String ID) {
+            if (gettersSettersWithIDs.containsValue(String.valueOf(ID))) {
+                throw new IllegalArgumentException("Tried to add a getterSetter with an ID that already exists.");
+            }
+            gettersSettersWithIDs.put(new GetterSetter<>(getter, setter),
+                    String.valueOf(defaultCounter++));
             return this;
         }
     }
     private DataSetter(Builder builder) {
-        this.gettersSetters = builder.gettersSetters;
+        this.gettersSettersWithIDs = builder.gettersSettersWithIDs;
     }
     public void save(Path jsonFile, @NotNull @NonNull DataFormat format) {
         try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
             switch (format) {
                 case DataFormat.TEXT_JSON -> {
                     ObjectMapper mapper = new ObjectMapper();
-                    stream.write(format.getIdentifier());
                     stream.write(mapper.writeValueAsBytes(getDataToSave()));
+                }
+                case DataFormat.TEXT_PRETTY_JSON -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    stream.write(mapper.writerWithDefaultPrettyPrinter()
+                            .writeValueAsBytes(getDataToSave()));
                 }
                 case BINARY_CBOR -> {
                     ObjectMapper mapper = new ObjectMapper(new CBORFactory());
@@ -63,14 +80,19 @@ public class DataSetter {
         }
     }
     public void load(Path jsonFile) {
-        try (FileInputStream stream = new FileInputStream(jsonFile.toString())) {
+        try {
+            FileInputStream stream = new FileInputStream(jsonFile.toString());
             DataFormat format = DataFormat.getFormatFromIdentifier((byte) stream.read());
             if (format == null) {
                 log.error("Format byte identifier wasn't included. file might be corrupted.");
                 return;
             }
             switch (format) {
-                case DataFormat.TEXT_JSON -> loadWithMapper(new ObjectMapper(), stream);
+                case DataFormat.TEXT_JSON, DataFormat.TEXT_PRETTY_JSON -> {
+                    stream.close();
+                    stream = new FileInputStream(jsonFile.toString());
+                    loadWithMapper(new ObjectMapper(), stream);
+                }
                 case BINARY_CBOR -> loadWithMapper(new ObjectMapper(new CBORFactory()), stream);
                 case BINARY_SMILE -> loadWithMapper(new ObjectMapper(new SmileFactory()), stream);
             }
@@ -83,9 +105,7 @@ public class DataSetter {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode rootNode = mapper.createObjectNode();
-            for (int i = 0; i < gettersSetters.size(); i++) {
-                GetterSetter<?> getterSetter = gettersSetters.get(i);
-
+            for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
                 ObjectNode objectNode = mapper.createObjectNode();
                 Getter<Object> getter = (Getter<Object>) getterSetter.getter;
                 Object got = getter.get();
@@ -95,7 +115,7 @@ public class DataSetter {
                 JsonNode getJsonNode = mapper.readTree(mapper.writeValueAsString(got));
                 objectNode.set("data", getJsonNode);
 
-                rootNode.set(String.valueOf(i), objectNode);
+                rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
             }
             return rootNode;
         } catch (Exception e) {
@@ -107,10 +127,14 @@ public class DataSetter {
     private void loadWithMapper(ObjectMapper mapper, FileInputStream stream) {
         try {
             JsonNode rootNode = mapper.readTree(stream);
-            for (int i = 0; i < gettersSetters.size(); i++) {
-                JsonNode subNode = rootNode.get(String.valueOf(i));
+            for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
+                String id = gettersSettersWithIDs.get(getterSetter);
+                JsonNode subNode = rootNode.get(id);
+                if (subNode == null) {
+                    log.error("No data at {} corrupted file?", id);
+                    continue;
+                }
 
-                GetterSetter<?> getterSetter = gettersSetters.get(i);
                 Setter<Object> setter = (Setter<Object>) getterSetter.setter;
 
                 Class<?> clazz = Class.forName(subNode.get("class").asText());
