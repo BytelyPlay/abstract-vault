@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.abstractvault.bytelyplay"
-version = "1.0-SNAPSHOT"
+version = "1.0-BETA"
 
 repositories {
     mavenCentral()
@@ -15,6 +15,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    compileOnly("org.jetbrains:annotations:26.0.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.20.0-rc1")
     implementation("org.slf4j:slf4j-api:2.0.17")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.20.0-rc1")
