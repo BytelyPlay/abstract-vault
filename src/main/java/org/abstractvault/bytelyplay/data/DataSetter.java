@@ -3,28 +3,23 @@ package org.abstractvault.bytelyplay.data;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.dataformat.smile.databind.SmileMapper;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.Getter;
 import org.abstractvault.bytelyplay.Setter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
 import org.abstractvault.bytelyplay.utils.GetterSetter;
+import org.abstractvault.bytelyplay.utils.MapperProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class DataSetter {
     private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs;
+    private final MapperProvider mapperProvider = new MapperProvider();
 
     public static class Builder {
         private ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs = new ConcurrentHashMap<>();
@@ -52,7 +47,7 @@ public class DataSetter {
     }
     public void save(Path jsonFile, @NotNull DataFormat format) {
         try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
-            stream.write(serialize(new FileInputStream(jsonFile.toString()), format));
+            stream.write(buildJsonTree(new FileInputStream(jsonFile.toString()), format));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -64,30 +59,9 @@ public class DataSetter {
             log.error("Tried to load a non-existent file.");
         }
     }
-    public byte[] serialize(InputStream inputStream, @NotNull @NonNull DataFormat format) {
+    public byte[] buildJsonTree(InputStream inputStream, @NotNull DataFormat format) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            switch (format) {
-                case DataFormat.TEXT_JSON -> {
-                    ObjectMapper mapper = new ObjectMapper();
-                    outputStream.write(mapper.writeValueAsBytes(serialize()));
-                }
-                case DataFormat.TEXT_PRETTY_JSON -> {
-                    ObjectMapper mapper = new ObjectMapper();
-                    outputStream.write(mapper.writerWithDefaultPrettyPrinter()
-                            .writeValueAsBytes(serialize()));
-                }
-                case BINARY_CBOR -> {
-                    ObjectMapper mapper = new ObjectMapper(new CBORFactory());
-                    outputStream.write(format.getIdentifier());
-                    outputStream.write(mapper.writeValueAsBytes(serialize()));
-                }
-                case BINARY_SMILE -> {
-                    ObjectMapper mapper = new ObjectMapper(new SmileFactory());
-                    outputStream.write(format.getIdentifier());
-                    outputStream.write(mapper.writeValueAsBytes(serialize()));
-                }
-                default -> log.error("Unimplemented DataFormat? defaulted to default.");
-            }
+            outputStream.write(mapperProvider.getWriter(format).writeValueAsBytes(buildJsonTree()));
             return outputStream.toByteArray();
         } catch (Exception e) {
             e.printStackTrace();
@@ -102,22 +76,16 @@ public class DataSetter {
                 log.error("Format byte identifier wasn't included. file might be corrupted.");
                 return;
             }
-            switch (format) {
-                case DataFormat.TEXT_JSON, DataFormat.TEXT_PRETTY_JSON -> {
-                    stream.reset();
-                    loadWithMapper(new ObjectMapper(), stream);
-                }
-                case BINARY_CBOR -> loadWithMapper(new ObjectMapper(new CBORFactory()), stream);
-                case BINARY_SMILE -> loadWithMapper(new ObjectMapper(new SmileFactory()), stream);
-            }
+            if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
+            loadWithMapper(mapperProvider.getMapper(format), stream);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     @SuppressWarnings("unchecked")
-    public @Nullable JsonNode serialize() {
+    public @Nullable JsonNode buildJsonTree() {
         try {
-            ObjectMapper mapper = new ObjectMapper();
+            ObjectMapper mapper = mapperProvider.getMapper();
             ObjectNode rootNode = mapper.createObjectNode();
             for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
                 ObjectNode objectNode = mapper.createObjectNode();
