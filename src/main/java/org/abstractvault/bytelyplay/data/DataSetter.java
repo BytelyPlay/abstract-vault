@@ -15,8 +15,7 @@ import org.abstractvault.bytelyplay.utils.GetterSetter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -51,37 +50,53 @@ public class DataSetter {
     private DataSetter(Builder builder) {
         this.gettersSettersWithIDs = builder.gettersSettersWithIDs;
     }
-    public void save(Path jsonFile, @NotNull @NonNull DataFormat format) {
+    public void save(Path jsonFile, @NotNull DataFormat format) {
         try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
-            switch (format) {
-                case DataFormat.TEXT_JSON -> {
-                    ObjectMapper mapper = new ObjectMapper();
-                    stream.write(mapper.writeValueAsBytes(getDataToSave()));
-                }
-                case DataFormat.TEXT_PRETTY_JSON -> {
-                    ObjectMapper mapper = new ObjectMapper();
-                    stream.write(mapper.writerWithDefaultPrettyPrinter()
-                            .writeValueAsBytes(getDataToSave()));
-                }
-                case BINARY_CBOR -> {
-                    ObjectMapper mapper = new ObjectMapper(new CBORFactory());
-                    stream.write(format.getIdentifier());
-                    stream.write(mapper.writeValueAsBytes(getDataToSave()));
-                }
-                case BINARY_SMILE -> {
-                    ObjectMapper mapper = new ObjectMapper(new SmileFactory());
-                    stream.write(format.getIdentifier());
-                    stream.write(mapper.writeValueAsBytes(getDataToSave()));
-                }
-                default -> log.error("Unimplemented DataFormat? defaulted to default.");
-            }
+            stream.write(serialize(new FileInputStream(jsonFile.toString()), format));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
     public void load(Path jsonFile) {
         try {
-            FileInputStream stream = new FileInputStream(jsonFile.toString());
+            load(new FileInputStream(jsonFile.toString()));
+        } catch (FileNotFoundException e) {
+            log.error("Tried to load a non-existent file.");
+        }
+    }
+    public byte[] serialize(InputStream inputStream, @NotNull @NonNull DataFormat format) {
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            switch (format) {
+                case DataFormat.TEXT_JSON -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    outputStream.write(mapper.writeValueAsBytes(serialize()));
+                }
+                case DataFormat.TEXT_PRETTY_JSON -> {
+                    ObjectMapper mapper = new ObjectMapper();
+                    outputStream.write(mapper.writerWithDefaultPrettyPrinter()
+                            .writeValueAsBytes(serialize()));
+                }
+                case BINARY_CBOR -> {
+                    ObjectMapper mapper = new ObjectMapper(new CBORFactory());
+                    outputStream.write(format.getIdentifier());
+                    outputStream.write(mapper.writeValueAsBytes(serialize()));
+                }
+                case BINARY_SMILE -> {
+                    ObjectMapper mapper = new ObjectMapper(new SmileFactory());
+                    outputStream.write(format.getIdentifier());
+                    outputStream.write(mapper.writeValueAsBytes(serialize()));
+                }
+                default -> log.error("Unimplemented DataFormat? defaulted to default.");
+            }
+            return outputStream.toByteArray();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new byte[0];
+    }
+    public void load(InputStream stream) {
+        try {
+            stream.mark(1);
             DataFormat format = DataFormat.getFormatFromIdentifier((byte) stream.read());
             if (format == null) {
                 log.error("Format byte identifier wasn't included. file might be corrupted.");
@@ -89,8 +104,7 @@ public class DataSetter {
             }
             switch (format) {
                 case DataFormat.TEXT_JSON, DataFormat.TEXT_PRETTY_JSON -> {
-                    stream.close();
-                    stream = new FileInputStream(jsonFile.toString());
+                    stream.reset();
                     loadWithMapper(new ObjectMapper(), stream);
                 }
                 case BINARY_CBOR -> loadWithMapper(new ObjectMapper(new CBORFactory()), stream);
@@ -101,7 +115,7 @@ public class DataSetter {
         }
     }
     @SuppressWarnings("unchecked")
-    public @Nullable JsonNode getDataToSave() {
+    public @Nullable JsonNode serialize() {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode rootNode = mapper.createObjectNode();
@@ -124,7 +138,7 @@ public class DataSetter {
         return null;
     }
     @SuppressWarnings("unchecked")
-    private void loadWithMapper(ObjectMapper mapper, FileInputStream stream) {
+    private void loadWithMapper(ObjectMapper mapper, InputStream stream) {
         try {
             JsonNode rootNode = mapper.readTree(stream);
             for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
