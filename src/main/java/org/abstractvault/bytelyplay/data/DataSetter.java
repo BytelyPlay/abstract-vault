@@ -22,7 +22,7 @@ public class DataSetter {
     private final MapperProvider mapperProvider = new MapperProvider();
 
     public static class Builder {
-        private ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs = new ConcurrentHashMap<>();
         private int defaultCounter = 0;
         public DataSetter build() {
             return new DataSetter(this);
@@ -47,9 +47,9 @@ public class DataSetter {
     }
     public void save(Path jsonFile, @NotNull DataFormat format) {
         try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
-            stream.write(buildJsonTree(new FileInputStream(jsonFile.toString()), format));
+            stream.write(serialize(format));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Something went wrong saving the data.", e);
         }
     }
     public void load(Path jsonFile) {
@@ -59,12 +59,12 @@ public class DataSetter {
             log.error("Tried to load a non-existent file.");
         }
     }
-    public byte[] buildJsonTree(InputStream inputStream, @NotNull DataFormat format) {
+    public byte[] serialize(@NotNull DataFormat format) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             outputStream.write(mapperProvider.getWriter(format).writeValueAsBytes(buildJsonTree()));
             return outputStream.toByteArray();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Something went wrong serializing the data.", e);
         }
         return new byte[0];
     }
@@ -79,7 +79,7 @@ public class DataSetter {
             if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
             loadWithMapper(mapperProvider.getMapper(format), stream);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Something went wrong loading the data from an InputStream.", e);
         }
     }
     @SuppressWarnings("unchecked")
@@ -101,7 +101,7 @@ public class DataSetter {
             }
             return rootNode;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Unable to build json tree", e);
         }
         return null;
     }
@@ -124,7 +124,7 @@ public class DataSetter {
                 setter.set(obj);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Something went wrong loading from InputStream.", e);
         }
     }
 }

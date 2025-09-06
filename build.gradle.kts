@@ -1,7 +1,8 @@
 plugins {
-    id("java")
+    id("java-library")
     id("io.freefair.lombok") version "8.14.2"
     id("com.gradleup.shadow") version "9.0.2"
+    id("maven-publish")
 }
 
 group = "org.abstractvault.bytelyplay"
@@ -12,14 +13,11 @@ repositories {
 }
 
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    compileOnly("org.jetbrains:annotations:26.0.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.20.0-rc1")
+    compileOnly("org.jetbrains:annotations:26.0.2-1")
+    api("com.fasterxml.jackson.core:jackson-databind:2.20.0")
     implementation("org.slf4j:slf4j-api:2.0.17")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.20.0-rc1")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.20.0-rc1")
+    api("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.20.0")
+    api("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.20.0")
 }
 
 tasks.test {
@@ -27,4 +25,21 @@ tasks.test {
 }
 tasks.build {
     dependsOn("shadowJar")
+}
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
+java {
+    withSourcesJar()
 }
