@@ -61,7 +61,9 @@ public class DataSetter {
     }
     public byte[] serialize(@NotNull DataFormat format) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            outputStream.write(format.getIdentifier());
             outputStream.write(mapperProvider.getWriter(format).writeValueAsBytes(buildJsonTree()));
+
             return outputStream.toByteArray();
         } catch (Exception e) {
             log.error("Something went wrong serializing the data.", e);
