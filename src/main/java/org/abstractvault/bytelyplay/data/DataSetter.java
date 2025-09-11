@@ -101,6 +101,8 @@ public class DataSetter {
                 if (got == null) {
                     objectNode.put("class", "null");
                     objectNode.put("data", "null");
+
+                    rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
                     continue;
                 }
 
