@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.Getter;
 import org.abstractvault.bytelyplay.Setter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
+import org.abstractvault.bytelyplay.exceptions.UncheckedException;
 import org.abstractvault.bytelyplay.utils.GetterSetter;
 import org.abstractvault.bytelyplay.utils.MapperProvider;
 import org.jetbrains.annotations.NotNull;
@@ -49,26 +50,27 @@ public class DataSetter {
         try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
             stream.write(serialize(format));
         } catch (Exception e) {
-            log.error("Something went wrong saving the data.", e);
+            throw new UncheckedException("Couldn't save.", e);
         }
     }
     public void load(Path jsonFile) {
         try {
             load(new FileInputStream(jsonFile.toString()));
         } catch (FileNotFoundException e) {
-            log.error("Tried to load a non-existent file.");
+            throw new UncheckedException("Tried to load a non-existent file.", e);
         }
     }
     public byte[] serialize(@NotNull DataFormat format) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            outputStream.write(format.getIdentifier());
+            if (format != DataFormat.TEXT_JSON &&
+                    format != DataFormat.TEXT_PRETTY_JSON)
+                outputStream.write(format.getIdentifier());
             outputStream.write(mapperProvider.getWriter(format).writeValueAsBytes(buildJsonTree()));
 
             return outputStream.toByteArray();
         } catch (Exception e) {
-            log.error("Something went wrong serializing the data.", e);
+            throw new UncheckedException("Couldn't serialize.", e);
         }
-        return new byte[0];
     }
     public void load(InputStream stream) {
         try {
@@ -81,7 +83,7 @@ public class DataSetter {
             if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
             loadWithMapper(mapperProvider.getMapper(format), stream);
         } catch (Exception e) {
-            log.error("Something went wrong loading the data from an InputStream.", e);
+            throw new UncheckedException("couldn't load from InputStream.", e);
         }
     }
     @SuppressWarnings("unchecked")
@@ -103,9 +105,8 @@ public class DataSetter {
             }
             return rootNode;
         } catch (Exception e) {
-            log.error("Unable to build json tree", e);
+            throw new UncheckedException("Couldn't build json tree.", e);
         }
-        return null;
     }
     @SuppressWarnings("unchecked")
     private void loadWithMapper(ObjectMapper mapper, InputStream stream) {
@@ -126,7 +127,19 @@ public class DataSetter {
                 setter.set(obj);
             }
         } catch (Exception e) {
-            log.error("Something went wrong loading from InputStream.", e);
+            throw new UncheckedException(e);
+        }
+    }
+    public JsonNode buildJsonTree(InputStream stream) {
+        try {
+            stream.mark(1);
+
+            DataFormat format = DataFormat.getFormatFromIdentifier((byte) stream.read());
+            if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
+
+            return mapperProvider.getMapper(format).readTree(stream);
+        } catch (Exception e) {
+            throw new UncheckedException(e);
         }
     }
 }
