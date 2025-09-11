@@ -15,9 +15,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
+@SuppressWarnings("unused")
 public class DataSetter {
     private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs;
     private final MapperProvider mapperProvider = new MapperProvider();
@@ -96,6 +98,12 @@ public class DataSetter {
                 Getter<Object> getter = (Getter<Object>) getterSetter.getter;
                 Object got = getter.get();
 
+                if (got == null) {
+                    objectNode.put("class", "null");
+                    objectNode.put("data", "null");
+                    continue;
+                }
+
                 objectNode.put("class", got.getClass().getName());
 
                 JsonNode getJsonNode = mapper.readTree(mapper.writeValueAsString(got));
@@ -121,6 +129,12 @@ public class DataSetter {
                 }
 
                 Setter<Object> setter = (Setter<Object>) getterSetter.setter;
+
+                String clazzName = subNode.get("class").asText();
+                if (clazzName.equals("null")) {
+                    setter.set(null);
+                    continue;
+                }
 
                 Class<?> clazz = Class.forName(subNode.get("class").asText());
                 Object obj = mapper.treeToValue(subNode.get("data"), clazz);
