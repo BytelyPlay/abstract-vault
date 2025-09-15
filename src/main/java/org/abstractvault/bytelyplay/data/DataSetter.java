@@ -15,7 +15,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -51,15 +50,15 @@ public class DataSetter {
     public void save(Path jsonFile, @NotNull DataFormat format) {
         try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
             stream.write(serialize(format));
-        } catch (Exception e) {
-            throw new UncheckedException("Couldn't save.", e);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Couldn't save.", e);
         }
     }
     public void load(Path jsonFile) {
         try {
             load(new FileInputStream(jsonFile.toString()));
         } catch (FileNotFoundException e) {
-            throw new UncheckedException("Tried to load a non-existent file.", e);
+            throw new UncheckedIOException("Tried to load a non-existent file.", e);
         }
     }
     public byte[] serialize(@NotNull DataFormat format) {
@@ -70,8 +69,8 @@ public class DataSetter {
             outputStream.write(mapperProvider.getWriter(format).writeValueAsBytes(buildJsonTree()));
 
             return outputStream.toByteArray();
-        } catch (Exception e) {
-            throw new UncheckedException("Couldn't serialize.", e);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Couldn't serialize.", e);
         }
     }
     public void load(InputStream stream) {
@@ -84,8 +83,8 @@ public class DataSetter {
             }
             if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
             loadWithMapper(mapperProvider.getMapper(format), stream);
-        } catch (Exception e) {
-            throw new UncheckedException("couldn't load from InputStream.", e);
+        } catch (IOException e) {
+            throw new UncheckedIOException("couldn't load from InputStream.", e);
         }
     }
     @SuppressWarnings("unchecked")
@@ -114,8 +113,8 @@ public class DataSetter {
                 rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
             }
             return rootNode;
-        } catch (Exception e) {
-            throw new UncheckedException("Couldn't build json tree.", e);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Couldn't build json tree.", e);
         }
     }
     @SuppressWarnings("unchecked")
@@ -142,7 +141,9 @@ public class DataSetter {
                 Object obj = mapper.treeToValue(subNode.get("data"), clazz);
                 setter.set(obj);
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        } catch (ClassNotFoundException e) {
             throw new UncheckedException(e);
         }
     }
@@ -154,8 +155,8 @@ public class DataSetter {
             if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
 
             return mapperProvider.getMapper(format).readTree(stream);
-        } catch (Exception e) {
-            throw new UncheckedException(e);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }
