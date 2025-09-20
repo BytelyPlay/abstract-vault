@@ -1,7 +1,7 @@
 # What is this
 a library that simplifies data serialization, saving and deserialization...
 and hopefully will simplify data migration.
-This uses JDK 21 due to issues with JDK 23 and JDK 24
+This uses JDK 24
 
 TODO PUT MORE INFO HERE
 
