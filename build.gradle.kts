@@ -1,7 +1,7 @@
 plugins {
     id("java-library")
     id("io.freefair.lombok") version "8.14.2"
-    id("com.gradleup.shadow") version "9.0.2"
+    id("com.gradleup.shadow") version "9.4.1"
     id("maven-publish")
 }
 
