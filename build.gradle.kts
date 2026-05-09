@@ -20,6 +20,10 @@ dependencies {
     api("tools.jackson.dataformat:jackson-dataformat-smile:3.1.3")
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_24;
+}
+
 tasks.test {
     useJUnitPlatform()
 }
