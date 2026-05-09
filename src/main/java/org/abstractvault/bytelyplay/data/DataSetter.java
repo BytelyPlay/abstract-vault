@@ -1,8 +1,9 @@
 package org.abstractvault.bytelyplay.data;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.Getter;
 import org.abstractvault.bytelyplay.Setter;
@@ -32,6 +33,7 @@ public class DataSetter {
         public <T> Builder getterSetter(Getter<T> getter, Setter<T> setter) {
             int id = defaultCounter++;
             while (gettersSettersWithIDs.containsValue(String.valueOf(id))) id++;
+
             getterSetter(getter, setter, String.valueOf(id));
             return this;
         }
@@ -88,34 +90,30 @@ public class DataSetter {
         }
     }
     @SuppressWarnings("unchecked")
-    public @Nullable JsonNode buildJsonTree() {
-        try {
-            ObjectMapper mapper = mapperProvider.getMapper();
-            ObjectNode rootNode = mapper.createObjectNode();
-            for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
-                ObjectNode objectNode = mapper.createObjectNode();
-                Getter<Object> getter = (Getter<Object>) getterSetter.getter;
-                Object got = getter.get();
+    public @Nullable JsonNode buildJsonTree() throws JacksonException {
+        ObjectMapper mapper = mapperProvider.getMapper();
+        ObjectNode rootNode = mapper.createObjectNode();
+        for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
+            ObjectNode objectNode = mapper.createObjectNode();
+            Getter<Object> getter = (Getter<Object>) getterSetter.getter;
+            Object got = getter.get();
 
-                if (got == null) {
-                    objectNode.put("class", "null");
-                    objectNode.put("data", "null");
-
-                    rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
-                    continue;
-                }
-
-                objectNode.put("class", got.getClass().getName());
-
-                JsonNode getJsonNode = mapper.readTree(mapper.writeValueAsString(got));
-                objectNode.set("data", getJsonNode);
+            if (got == null) {
+                objectNode.put("class", "null");
+                objectNode.put("data", "null");
 
                 rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
+                continue;
             }
-            return rootNode;
-        } catch (IOException e) {
-            throw new UncheckedIOException("Couldn't build json tree.", e);
+
+            objectNode.put("class", got.getClass().getName());
+
+            JsonNode getJsonNode = mapper.readTree(mapper.writeValueAsString(got));
+            objectNode.set("data", getJsonNode);
+
+            rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
         }
+        return rootNode;
     }
     @SuppressWarnings("unchecked")
     private void loadWithMapper(ObjectMapper mapper, InputStream stream) {
@@ -131,18 +129,16 @@ public class DataSetter {
 
                 Setter<Object> setter = (Setter<Object>) getterSetter.setter;
 
-                String clazzName = subNode.get("class").asText();
+                String clazzName = subNode.get("class").asString();
                 if (clazzName.equals("null")) {
                     setter.set(null);
                     continue;
                 }
 
-                Class<?> clazz = Class.forName(subNode.get("class").asText());
+                Class<?> clazz = Class.forName(subNode.get("class").asString());
                 Object obj = mapper.treeToValue(subNode.get("data"), clazz);
                 setter.set(obj);
             }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         } catch (ClassNotFoundException e) {
             throw new UncheckedException(e);
         }

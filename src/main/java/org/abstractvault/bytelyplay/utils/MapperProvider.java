@@ -1,12 +1,11 @@
 package org.abstractvault.bytelyplay.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
+import tools.jackson.dataformat.cbor.CBORFactory;
+import tools.jackson.dataformat.smile.SmileFactory;
 import org.abstractvault.bytelyplay.enums.DataFormat;
 
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MapperProvider {

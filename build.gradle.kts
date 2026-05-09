@@ -6,18 +6,18 @@ plugins {
 }
 
 group = "org.abstractvault.bytelyplay"
-version = "1.2.2-BETA"
+version = "1.2.3-BETA"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compileOnly("org.jetbrains:annotations:26.0.2-1")
-    api("com.fasterxml.jackson.core:jackson-databind:2.20.0")
+    compileOnly("org.jetbrains:annotations:26.1.0")
+    api("tools.jackson.core:jackson-databind:3.1.3")
     implementation("org.slf4j:slf4j-api:2.0.17")
-    api("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.20.0")
-    api("com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.20.0")
+    api("tools.jackson.dataformat:jackson-dataformat-cbor:3.1.3")
+    api("tools.jackson.dataformat:jackson-dataformat-smile:3.1.3")
 }
 
 tasks.test {
