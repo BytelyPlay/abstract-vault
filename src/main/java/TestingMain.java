@@ -1,10 +1,15 @@
+import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.data.DataSetter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
+import org.abstractvault.bytelyplay.io.ResettableInputStream;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
+@Slf4j
 public class TestingMain {
     public static void main(String[] args) {
         DataSetter dataSetter = new DataSetter.Builder()
@@ -15,19 +20,23 @@ public class TestingMain {
         Path jsonFile = Path.of("data.json");
         ByteArrayInputStream input1;
 
-        dataSetter.save(jsonFile, DataFormat.TEXT_PRETTY_JSON);
-        {
-            long startTime = System.currentTimeMillis();
-            byte[] end = dataSetter.serialize(DataFormat.TEXT_PRETTY_JSON);
-            long endTime = System.currentTimeMillis();
-            System.out.println(endTime - startTime);
-            input1 = new ByteArrayInputStream(end);
-        }
-        {
-            long startTime = System.currentTimeMillis();
-            dataSetter.load(input1);
-            long endTime = System.currentTimeMillis();
-            System.out.println(endTime - startTime);
+        try {
+            dataSetter.save(jsonFile, DataFormat.TEXT_PRETTY_JSON);
+            {
+                long startTime = System.currentTimeMillis();
+                byte[] end = dataSetter.serialize(DataFormat.TEXT_PRETTY_JSON);
+                long endTime = System.currentTimeMillis();
+                System.out.println(endTime - startTime);
+                input1 = new ByteArrayInputStream(end);
+            }
+            {
+                long startTime = System.currentTimeMillis();
+                dataSetter.load(input1);
+                long endTime = System.currentTimeMillis();
+                System.out.println(endTime - startTime);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
     public static String get() {

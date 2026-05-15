@@ -1,5 +1,6 @@
 package org.abstractvault.bytelyplay.data;
 
+import org.abstractvault.bytelyplay.io.ResettableInputStream;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -75,12 +76,8 @@ public class DataSetter {
             throw new UncheckedIOException("Couldn't save.", e);
         }
     }
-    public void load(Path jsonFile) {
-        try {
-            load(new FileInputStream(jsonFile.toString()));
-        } catch (FileNotFoundException e) {
-            throw new UncheckedIOException("Tried to load a non-existent file.", e);
-        }
+    public void load(Path jsonFile) throws IOException {
+        load(Files.newInputStream(jsonFile));
     }
     public byte[] serialize(@NotNull DataFormat format) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -94,19 +91,19 @@ public class DataSetter {
             throw new UncheckedIOException("Couldn't serialize.", e);
         }
     }
-    public void load(InputStream stream) {
-        try {
-            stream.mark(1);
-            DataFormat format = DataFormat.getFormatFromIdentifier((byte) stream.read());
-            if (format == null) {
-                log.error("Format byte identifier wasn't included. file might be corrupted.");
-                return;
-            }
-            if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
-            loadWithMapper(mapperProvider.getMapper(format), stream);
-        } catch (IOException e) {
-            throw new UncheckedIOException("couldn't load from InputStream.", e);
+    public void load(InputStream rawIn) throws IOException {
+        InputStream in = new ResettableInputStream(rawIn);
+        in.mark(1);
+
+        DataFormat format = DataFormat.getFormatFromIdentifier((byte) in.read());
+
+        if (format == null) {
+            log.error("Format byte identifier wasn't included. file might be corrupted.");
+            return;
         }
+        if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON)
+            in.reset();
+        loadWithMapper(mapperProvider.getMapper(format), in);
     }
     @SuppressWarnings("unchecked")
     public @Nullable JsonNode buildJsonTree() throws JacksonException {
@@ -130,7 +127,7 @@ public class DataSetter {
     }
     @SuppressWarnings("unchecked")
     private void loadWithMapper(ObjectMapper mapper, InputStream stream)
-            throws NullPointerException {
+            throws NullPointerException, JacksonException {
         JsonNode rootNode = mapper.readTree(stream);
 
         for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
@@ -159,16 +156,12 @@ public class DataSetter {
             setter.set(obj);
         }
     }
-    public JsonNode buildJsonTree(InputStream stream) {
-        try {
-            stream.mark(1);
+    public JsonNode buildJsonTree(InputStream stream) throws IOException {
+        stream.mark(1);
 
-            DataFormat format = DataFormat.getFormatFromIdentifier((byte) stream.read());
-            if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
+        DataFormat format = DataFormat.getFormatFromIdentifier((byte) stream.read());
+        if (format == DataFormat.TEXT_JSON || format == DataFormat.TEXT_PRETTY_JSON) stream.reset();
 
-            return mapperProvider.getMapper(format).readTree(stream);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return mapperProvider.getMapper(format).readTree(stream);
     }
 }
