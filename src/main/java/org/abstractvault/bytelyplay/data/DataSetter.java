@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 
 // TODO: Make it not add class fields in the json, make it just take the getterSetter as a class hint.
+// TODO: Give an option to specify the data format, instead of using the one byte thing.
 @Slf4j
 @SuppressWarnings("unused")
 public class DataSetter {
