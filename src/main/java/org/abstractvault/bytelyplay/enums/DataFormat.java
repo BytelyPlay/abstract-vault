@@ -15,10 +15,14 @@ public enum DataFormat {
     DataFormat(byte b) {
         this.identifier = b;
     }
+
     public static @Nullable DataFormat getFormatFromIdentifier(byte identifier) {
-        for (DataFormat format : DataFormat.values()) {
+        for (DataFormat format : DataFormat.values())
             if (format.identifier == identifier) return format;
-        }
         return null;
+    }
+
+    public boolean isJson() {
+        return this == TEXT_JSON || this == TEXT_PRETTY_JSON;
     }
 }

@@ -16,7 +16,6 @@ public class GetterSetter<T> {
     public final @NotNull Setter<T> setter;
     private Class<T> clazz;
 
-    @SuppressWarnings("unchecked")
     public GetterSetter(Getter<T> getter, Setter<T> setter) {
         this.getter = getter;
         this.setter = setter;
@@ -30,8 +29,8 @@ public class GetterSetter<T> {
     public @Nullable Class<T> getClazz() {
         if (clazz != null) return clazz;
 
-        T got = getter.get();
-        if (got != null) return (Class<T>) got.getClass();
+        T obj = getter.get();
+        if (obj != null) return (Class<T>) obj.getClass();
 
         return null;
     }
