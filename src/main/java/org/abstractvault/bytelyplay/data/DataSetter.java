@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 
 // TODO: Make it not add class fields in the json, make it just take the getterSetter as a class hint.
-// TODO: Give an option to specify the data format, instead of using the one byte thing.
 @Slf4j
 @SuppressWarnings("unused")
 public class DataSetter {
@@ -29,9 +28,11 @@ public class DataSetter {
     public static class Builder {
         private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs = new ConcurrentHashMap<>();
         private int defaultCounter = 0;
+
         public DataSetter build() {
             return new DataSetter(this);
         }
+
         public <T> Builder getterSetter(Getter<T> getter, Setter<T> setter) {
             int id = defaultCounter++;
             while (gettersSettersWithIDs.containsValue(String.valueOf(id))) id++;
