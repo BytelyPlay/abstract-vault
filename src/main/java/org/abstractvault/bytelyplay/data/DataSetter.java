@@ -18,6 +18,7 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 
+// TODO: Make it not add class fields in the json, make it just take the getterSetter as a class hint.
 @Slf4j
 @SuppressWarnings("unused")
 public class DataSetter {
