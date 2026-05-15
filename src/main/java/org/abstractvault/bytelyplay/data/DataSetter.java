@@ -8,25 +8,33 @@ import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.Getter;
 import org.abstractvault.bytelyplay.Setter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
-import org.abstractvault.bytelyplay.exceptions.UncheckedException;
 import org.abstractvault.bytelyplay.utils.GetterSetter;
 import org.abstractvault.bytelyplay.utils.MapperProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-// TODO: Make it not add class fields in the json, make it just take the getterSetter as a class hint.
+// TODO: Clean this up by splitting this class into multiple helpers.
+// TODO: Add a way to for example make a "coordinates: { x: 0, y: 0, z: 0 }" thing (able to make an object node with stuff inside of it, in a way where you can also nest more layers.
 @Slf4j
 @SuppressWarnings("unused")
 public class DataSetter {
-    private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs;
+    // must be thread-safe
+    
+    private final Map<GetterSetter<?>, String> gettersSettersWithIDs;
     private final MapperProvider mapperProvider = new MapperProvider();
 
     public static class Builder {
-        private final ConcurrentHashMap<GetterSetter<?>, String> gettersSettersWithIDs = new ConcurrentHashMap<>();
+        private final Map<GetterSetter<?>, String> gettersSettersWithIDs =
+                Collections.synchronizedMap(new LinkedHashMap<>());
         private int defaultCounter = 0;
 
         public DataSetter build() {
@@ -37,23 +45,31 @@ public class DataSetter {
             int id = defaultCounter++;
             while (gettersSettersWithIDs.containsValue(String.valueOf(id))) id++;
 
-            getterSetter(getter, setter, String.valueOf(id));
+            getterSetter(getter, setter, String.valueOf(id), null);
             return this;
         }
-        public <T> Builder getterSetter(Getter<T> getter, Setter<T> setter, String ID) {
+
+        // Recommended if the Getter can return null.
+        public <T> Builder getterSetter(Getter<T> getter, Setter<T> setter,
+                                        String ID, @Nullable Class<T> clazz) {
             if (gettersSettersWithIDs.containsValue(String.valueOf(ID))) {
-                throw new IllegalArgumentException("Tried to add a getterSetter with an ID that already exists.");
+                throw new IllegalArgumentException(
+                        "Tried to add a getterSetter with an ID that already exists."
+                );
             }
-            gettersSettersWithIDs.put(new GetterSetter<>(getter, setter),
-                    ID);
+            gettersSettersWithIDs.put(
+                    new GetterSetter<>(getter, setter, clazz),
+                    ID
+            );
             return this;
         }
     }
     private DataSetter(Builder builder) {
         this.gettersSettersWithIDs = builder.gettersSettersWithIDs;
     }
+
     public void save(Path jsonFile, @NotNull DataFormat format) {
-        try (FileOutputStream stream = new FileOutputStream(jsonFile.toString())) {
+        try (OutputStream stream = Files.newOutputStream(jsonFile)) {
             stream.write(serialize(format));
         } catch (IOException e) {
             throw new UncheckedIOException("Couldn't save.", e);
@@ -96,54 +112,51 @@ public class DataSetter {
     public @Nullable JsonNode buildJsonTree() throws JacksonException {
         ObjectMapper mapper = mapperProvider.getMapper();
         ObjectNode rootNode = mapper.createObjectNode();
+
         for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
-            ObjectNode objectNode = mapper.createObjectNode();
             Getter<Object> getter = (Getter<Object>) getterSetter.getter;
             Object got = getter.get();
+            String id = gettersSettersWithIDs.get(getterSetter);
 
             if (got == null) {
-                objectNode.put("class", "null");
-                objectNode.put("data", "null");
-
-                rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
+                rootNode.put(id, "null");
                 continue;
             }
 
-            objectNode.put("class", got.getClass().getName());
-
-            JsonNode getJsonNode = mapper.readTree(mapper.writeValueAsString(got));
-            objectNode.set("data", getJsonNode);
-
-            rootNode.set(gettersSettersWithIDs.get(getterSetter), objectNode);
+            JsonNode gotJsonNode = mapper.readTree(mapper.writeValueAsString(got));
+            rootNode.set(id, gotJsonNode);
         }
         return rootNode;
     }
     @SuppressWarnings("unchecked")
-    private void loadWithMapper(ObjectMapper mapper, InputStream stream) {
-        try {
-            JsonNode rootNode = mapper.readTree(stream);
-            for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
-                String id = gettersSettersWithIDs.get(getterSetter);
-                JsonNode subNode = rootNode.get(id);
-                if (subNode == null) {
-                    log.error("No data at {} corrupted file?", id);
-                    continue;
-                }
+    private void loadWithMapper(ObjectMapper mapper, InputStream stream)
+            throws NullPointerException {
+        JsonNode rootNode = mapper.readTree(stream);
 
-                Setter<Object> setter = (Setter<Object>) getterSetter.setter;
+        for (GetterSetter<?> getterSetter : gettersSettersWithIDs.keySet()) {
+            Setter<Object> setter = (Setter<Object>) getterSetter.setter;
+            Getter<Object> getter = (Getter<Object>) getterSetter.getter;
 
-                String clazzName = subNode.get("class").asString();
-                if (clazzName.equals("null")) {
-                    setter.set(null);
-                    continue;
-                }
+            String id = gettersSettersWithIDs.get(getterSetter);
+            JsonNode subNode = rootNode.get(id);
 
-                Class<?> clazz = Class.forName(subNode.get("class").asString());
-                Object obj = mapper.treeToValue(subNode.get("data"), clazz);
-                setter.set(obj);
+            Class<?> clazz = getterSetter.getClazz();
+
+            if (subNode == null) {
+                log.error("No data at {} corrupted file?", id);
+                continue;
             }
-        } catch (ClassNotFoundException e) {
-            throw new UncheckedException(e);
+
+            if (subNode.isString() && subNode.asString().equals("null")) {
+                setter.set(null);
+                continue;
+            }
+
+            if (clazz == null)
+                throw new NullPointerException("getterSetter.clazz is null, and getter returns null");
+
+            Object obj = mapper.treeToValue(subNode, clazz);
+            setter.set(obj);
         }
     }
     public JsonNode buildJsonTree(InputStream stream) {

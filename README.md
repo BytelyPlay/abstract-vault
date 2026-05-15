@@ -1,7 +1,8 @@
 # What is this
-a library that simplifies data serialization, saving and deserialization...
-and hopefully will simplify data migration.
-This uses JDK 24
+a library that simplifies data serialization, saving and deserialization... \
+and hopefully will simplify data migration. \
+This uses JDK 25 \
+This library is focused on making Configs easier.
 
 TODO PUT MORE INFO HERE
 

@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MapperProvider {
     private final ConcurrentHashMap<DataFormat, ObjectMapper> objectMappers = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<DataFormat, ObjectWriter> writersForDataFormats = new ConcurrentHashMap<>();
+
     public MapperProvider() {
         ObjectMapper cborMapper = new ObjectMapper(new CBORFactory());
         ObjectMapper smileMapper = new ObjectMapper(new SmileFactory());
