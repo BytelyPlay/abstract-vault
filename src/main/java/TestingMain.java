@@ -3,19 +3,16 @@ import org.abstractvault.bytelyplay.data.DataSetter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
 import org.abstractvault.bytelyplay.io.ResettableInputStream;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Path;
 
 @Slf4j
 public class TestingMain {
     public static void main(String[] args) {
         DataSetter dataSetter = new DataSetter.Builder()
-                .getterSetter(TestingMain::get, TestingMain::set, "setReal", String.class)
-                .getterSetter(TestingMain::get1, TestingMain::set1, "setReal1", String.class)
-                .getterSetter(TestingMain::get2, TestingMain::set2, "setReal2", String.class)
+                .getterSetter(TestingMain::get, TestingMain::set, "1", String.class)
+                .getterSetter(TestingMain::get1, TestingMain::set1, "2", String.class)
+                .getterSetter(TestingMain::get2, TestingMain::set2, "3", String.class)
                 .build();
         Path jsonFile = Path.of("data.json");
         ByteArrayInputStream input1;
@@ -23,15 +20,18 @@ public class TestingMain {
         try {
             dataSetter.save(jsonFile, DataFormat.TEXT_PRETTY_JSON);
             {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+
                 long startTime = System.currentTimeMillis();
-                byte[] end = dataSetter.serialize(DataFormat.TEXT_PRETTY_JSON);
+                dataSetter.serialize(out, DataFormat.TEXT_PRETTY_JSON);
                 long endTime = System.currentTimeMillis();
                 System.out.println(endTime - startTime);
-                input1 = new ByteArrayInputStream(end);
+
+                input1 = new ByteArrayInputStream(out.toByteArray());
             }
             {
                 long startTime = System.currentTimeMillis();
-                dataSetter.load(input1);
+                dataSetter.deserialize(input1);
                 long endTime = System.currentTimeMillis();
                 System.out.println(endTime - startTime);
             }

@@ -1,5 +1,6 @@
 package org.abstractvault.bytelyplay.data;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.enums.DataFormat;
 import org.abstractvault.bytelyplay.io.ResettableInputStream;
@@ -16,6 +17,7 @@ import java.util.Map;
 @Slf4j
 public class DataSerializer {
     private final MapperProvider mapperProvider;
+    @Getter
     private final JsonTreeMapTreeConverter converter;
 
     public DataSerializer(MapperProvider provider) {
@@ -46,7 +48,7 @@ public class DataSerializer {
      */
     public Map<String, Object> deserializeToMapTree(InputStream rawIn,
                                                     Map<String, Class<?>> keyWithClass)
-            throws IOException {
+            throws IOException, IllegalArgumentException {
         try {
             ResettableInputStream in = new ResettableInputStream(rawIn);
             DataFormat format = getFormat(in);
@@ -81,7 +83,7 @@ public class DataSerializer {
             throw new IOException(e);
         }
     }
-    public byte[] serializeTree(Map<String, Object> idAndObj, DataFormat format)
+    public byte[] serializeMapTree(Map<String, Object> idAndObj, DataFormat format)
             throws IOException {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
