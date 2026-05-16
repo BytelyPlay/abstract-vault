@@ -17,6 +17,7 @@ import java.util.Map;
 @Slf4j
 public class DataSerializer {
     private final MapperProvider mapperProvider;
+
     @Getter
     private final JsonTreeMapTreeConverter converter;
 
