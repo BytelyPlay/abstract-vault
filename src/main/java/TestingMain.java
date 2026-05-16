@@ -1,7 +1,6 @@
 import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.data.DataSetter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
-import org.abstractvault.bytelyplay.io.ResettableInputStream;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -19,6 +18,7 @@ public class TestingMain {
 
         try {
             dataSetter.save(jsonFile, DataFormat.TEXT_PRETTY_JSON);
+            dataSetter.load(jsonFile);
             {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
 

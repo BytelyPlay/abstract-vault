@@ -3,7 +3,6 @@ package org.abstractvault.bytelyplay.data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.enums.DataFormat;
-import org.abstractvault.bytelyplay.io.ResettableInputStream;
 import org.abstractvault.bytelyplay.utils.MapperProvider;
 import org.jetbrains.annotations.NotNull;
 import tools.jackson.core.JacksonException;
@@ -12,6 +11,7 @@ import tools.jackson.databind.exc.JsonNodeException;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -28,7 +28,7 @@ public class DataSerializer {
     public JsonNode deserializeToJsonTree(InputStream rawIn)
             throws IOException {
         try {
-            ResettableInputStream in = new ResettableInputStream(rawIn);
+            BufferedInputStream in = new BufferedInputStream(rawIn);
             DataFormat format = getFormat(in);
 
             return mapperProvider
@@ -51,12 +51,12 @@ public class DataSerializer {
                                                     Map<String, Class<?>> keyWithClass)
             throws IOException, IllegalArgumentException {
         try {
-            ResettableInputStream in = new ResettableInputStream(rawIn);
+            BufferedInputStream in = new BufferedInputStream(rawIn);
             DataFormat format = getFormat(in);
 
             ObjectNode node = mapperProvider
                     .getMapper(format)
-                    .readTree(rawIn)
+                    .readTree(in)
                     .asObject();
             return converter.jsonTreeToMapTree(node, keyWithClass);
         } catch (JsonNodeException e) {
@@ -103,7 +103,7 @@ public class DataSerializer {
             throw new IOException(e);
         }
     }
-    private @NotNull DataFormat getFormat(ResettableInputStream in)
+    private @NotNull DataFormat getFormat(InputStream in)
             throws IOException {
         in.mark(1);
 
