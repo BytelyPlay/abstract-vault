@@ -53,7 +53,8 @@ public class JsonTreeMapTreeConverter {
 
                 if (classForKey == null && !(entry.getValue() instanceof NullNode)) {
                     throw new IllegalArgumentException(
-                            "Class is null in keyWithClass when it shouldn't be."
+                            "Class is null in keyWithClass when it shouldn't be, the other possibility is, " +
+                                    "there is an entry in the Json file that shouldn't be there."
                     );
                 }
                 mapTree.put(
