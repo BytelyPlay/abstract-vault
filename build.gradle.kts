@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "org.abstractvault.bytelyplay"
-version = "2.0.0-BETA"
+version = "3.0.0-BETA"
 
 repositories {
     mavenCentral()
