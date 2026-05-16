@@ -1,7 +1,5 @@
 package org.abstractvault.bytelyplay.data;
 
-import org.abstractvault.bytelyplay.enums.DataFormat;
-import org.abstractvault.bytelyplay.io.ResettableInputStream;
 import org.abstractvault.bytelyplay.utils.MapperProvider;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -10,7 +8,6 @@ import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,7 +33,7 @@ public class JsonTreeMapTreeConverter {
 
     /**
      * Converts a Json tree into a Map tree.
-     * @param jsonTree The Json tree
+     * @param jsonTree The JSON tree
      * @param keyWithClass The key to class map.
      * @return The Map Tree
      *

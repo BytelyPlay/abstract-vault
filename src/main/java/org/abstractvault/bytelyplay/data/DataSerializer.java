@@ -1,23 +1,16 @@
 package org.abstractvault.bytelyplay.data;
 
 import lombok.extern.slf4j.Slf4j;
-import org.abstractvault.bytelyplay.Getter;
-import org.abstractvault.bytelyplay.Setter;
 import org.abstractvault.bytelyplay.enums.DataFormat;
 import org.abstractvault.bytelyplay.io.ResettableInputStream;
-import org.abstractvault.bytelyplay.utils.GetterSetter;
 import org.abstractvault.bytelyplay.utils.MapperProvider;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.exc.JsonNodeException;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.util.Map;
 
 @Slf4j
@@ -33,23 +26,57 @@ public class DataSerializer {
             throws IOException {
         try {
             ResettableInputStream in = new ResettableInputStream(rawIn);
-            in.mark(1);
-
-            DataFormat format = DataFormat.getFormatFromIdentifier((byte) in.read());
-            if (format.isJson()) in.reset();
+            DataFormat format = getFormat(in);
 
             return mapperProvider
                     .getMapper(format)
                     .readTree(in);
-        } catch (JacksonException | NullPointerException e) {
+        } catch (JacksonException e) {
             throw new IOException(e);
         }
     }
-    public byte[] serializeJsonTree(JsonNode node, DataFormat format) {
+
+    /**
+     * Deserializes the InputStream's contents to a Map tree.
+     * @param rawIn the Input Stream.
+     * @param keyWithClass The way to map the key to a class,
+     *                     an entry can be null or not there if the thing is null anyway.
+     * @return The Map Tree.
+     * @throws IOException If anything goes wrong, this is thrown.
+     */
+    public Map<String, Object> deserializeToMapTree(InputStream rawIn,
+                                                    Map<String, Class<?>> keyWithClass)
+            throws IOException {
         try {
-            return mapperProvider
+            ResettableInputStream in = new ResettableInputStream(rawIn);
+            DataFormat format = getFormat(in);
+
+            ObjectNode node = mapperProvider
+                    .getMapper(format)
+                    .readTree(rawIn)
+                    .asObject();
+            return converter.jsonTreeToMapTree(node, keyWithClass);
+        } catch (JsonNodeException e) {
+            throw new IOException(
+                    "Seems like this Json tree is extremely corrupted, " +
+                            "it isn't even an object node.", e);
+        } catch (JacksonException e) {
+            throw new IOException(e);
+        }
+    }
+    public byte[] serializeJsonTree(JsonNode node, DataFormat format)
+            throws IOException {
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+            writeFormatIdentifier(format, out);
+
+            out.write(
+                    mapperProvider
                     .getWriter(format)
-                    .writeValueAsBytes(node);
+                    .writeValueAsBytes(node)
+            );
+            return out.toByteArray();
         } catch (JacksonException e) {
             throw new IOException(e);
         }
@@ -59,14 +86,36 @@ public class DataSerializer {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-            if (!format.isJson())
-                out.write(format.getIdentifier());
+            writeFormatIdentifier(format, out);
 
-            return mapperProvider
+            out.write(
+                    mapperProvider
                     .getWriter(format)
-                    .writeValueAsBytes(converter.buildJsonTreeFromTree(idAndObj));
+                    .writeValueAsBytes(
+                            converter.mapTreeToJsonTree(idAndObj)
+                    )
+            );
+            return out.toByteArray();
         } catch (JacksonException e) {
             throw new IOException(e);
         }
+    }
+    private @NotNull DataFormat getFormat(ResettableInputStream in)
+            throws IOException {
+        in.mark(1);
+
+        DataFormat format = DataFormat.getFormatFromIdentifier((byte) in.read());
+        if (format == null)
+            throw new IOException("format == null, " +
+                    "data may be corrupted since the format identifier isn't recognized.");
+
+        if (format.isJson())
+            in.reset();
+        return format;
+    }
+    private void writeFormatIdentifier(DataFormat format, OutputStream out)
+            throws IOException {
+        if (!format.isJson())
+            out.write(format.getIdentifier());
     }
 }

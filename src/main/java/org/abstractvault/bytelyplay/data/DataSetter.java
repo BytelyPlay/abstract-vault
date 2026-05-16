@@ -1,22 +1,13 @@
 package org.abstractvault.bytelyplay.data;
 
-import org.abstractvault.bytelyplay.io.ResettableInputStream;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.abstractvault.bytelyplay.Getter;
 import org.abstractvault.bytelyplay.Setter;
-import org.abstractvault.bytelyplay.enums.DataFormat;
 import org.abstractvault.bytelyplay.utils.GetterSetter;
 import org.abstractvault.bytelyplay.utils.MapperProvider;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
